@@ -3,6 +3,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import inspect
 from numbers import Number
 from typing import Dict, Sequence, Union, Tuple
 
@@ -18,7 +19,7 @@ __all__ = ["NormalParamWrapper", "Delta"]
 D.Distribution.set_default_validate_args(False)
 
 
-class NormalParamWrapper(nn.Module):
+class NormalParamWrapperBase(nn.Module):
     """A wrapper for normal distribution parameters.
 
     Args:
@@ -60,6 +61,11 @@ class NormalParamWrapper(nn.Module):
         self.scale_mapping = scale_mapping
         self.scale_lb = scale_lb
 
+    def __init_subclass__(cls, /, forward_sig, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.forward.__signature__ = forward_sig
+        cls.__name__ = "NormalParamWrapper"
+
     def forward(self, *tensors: torch.Tensor) -> Tuple[torch.Tensor]:
         net_output = self.operator(*tensors)
         others = tuple()
@@ -68,6 +74,16 @@ class NormalParamWrapper(nn.Module):
         loc, scale = net_output.chunk(2, -1)
         scale = mappings(self.scale_mapping)(scale).clamp_min(self.scale_lb)
         return (loc, scale, *others)
+
+
+def NormalParamWrapper(operator, scale_mapping="biased_softplus_1.0", scale_lb=1e-4):
+    class NormalParamWrapperClass(
+        NormalParamWrapperBase,
+        forward_sig=inspect.signature(operator.__class__.forward),
+    ):
+        pass
+
+    return NormalParamWrapperClass(operator, scale_mapping, scale_lb)
 
 
 class Delta(D.Distribution):
