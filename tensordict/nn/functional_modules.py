@@ -10,6 +10,7 @@ from torch import nn
 
 from tensordict import TensorDict
 from tensordict.tensordict import TensorDictBase
+from tensordict.nn.distributions import NormalParamWrapper
 
 _RESET_OLD_TENSORDICT = True
 try:
@@ -225,7 +226,10 @@ def make_functional(module):
 
 
 def _forward_decorator(module):
-    forward = module.forward
+    if isinstance(module, NormalParamWrapper):
+        forward = module.operator.forward
+    else:
+        forward = module.forward
 
     # we need to update the signature so that params can be the last positional arg
     oldsig = inspect.signature(forward)
