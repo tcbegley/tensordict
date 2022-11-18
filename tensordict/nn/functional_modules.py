@@ -233,7 +233,7 @@ def _forward_decorator(module):
     # if yes insert step parameter before it, else insert it in last position
     params = list(oldsig.parameters.values())
     for i, param in enumerate(params):
-        if param.kind == inspect.Parameter.VAR_POSITIONAL:
+        if param.kind == inspect.Parameter.KEYWORD_ONLY:
             break
         if param.kind == inspect.Parameter.VAR_KEYWORD:
             break
